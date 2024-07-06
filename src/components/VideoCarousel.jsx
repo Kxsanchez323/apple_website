@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { HighlightsSlides } from "../constants";
 import gsap from "gsap";
 import { pauseImg, playImg, replayImg } from "../utils";
+import { useGSAP } from "@gsap/react";
 
 const VideoCarousel = () => {
   const videoRef = useRef([]);
@@ -20,6 +21,23 @@ const VideoCarousel = () => {
 
   const { isEnd, isLastVideo, startPlay, videoId, isPlaying } = video;
 
+  useGSAP(() => {
+    gsap.to('#video', {
+      scrollTrigger: {
+        trigger: videoId,
+        toggleActions: 'restart none none none'
+      },
+      onComplete: () => {
+        setVideo((pre) => ({
+          ...pre,
+          startPlay: true,
+          isPlaying: true,
+        }))
+      }
+    })
+
+  }, [isEnd, videoId])
+
   useEffect(() => {
     if (loadedData.length > 3) {
       if (!isPlaying) {
@@ -30,15 +48,25 @@ const VideoCarousel = () => {
     }
   }, [startPlay, videoId, isPlaying, loadedData]);
 
+
+  const handleLoadedMetadata = (i,e) => setLoadedData((pre) => [...pre, e])
+
+
   useEffect(() => {
-    const currentProgress = 0;
+    let currentProgress = 0;
 
     let span = videoSpanRef.current;
 
     if (span[videoId]) {
       //animate the progress of the video.
       let anim = gsap.to(span[videoId], {
-        onUpdate: () => {},
+        onUpdate: () => {
+          const progress = Math.ceil(anim.progress() * 100);
+
+          if(progress != currentProgress) {
+            currentProgress = progress;
+          }
+        },
 
         onComplete: () => {},
       });
@@ -54,7 +82,7 @@ const VideoCarousel = () => {
         setVideo((pre) => ({ ...pre, isLastVideo: true }));
         break;
       case "video-reset":
-        setVideo((pre) => ({ ...pre, isLastVideo: false }, (videoId = 0)));
+        setVideo((pre) => ({ ...pre, videoId: 0, isLastVideo: false }));
         break;
       case "play":
         setVideo((pre) => ({ ...pre, isPlaying: !pre.isPlaying }));
@@ -83,6 +111,7 @@ const VideoCarousel = () => {
                       isPlaying: true,
                     }));
                   }}
+                  onLoadedMetadata={(e) => handleLoadedMetadata(i, e)}
                 >
                   <source src={list.video} type="video/mp4" />
                 </video>
